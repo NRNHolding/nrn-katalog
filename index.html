@@ -200,13 +200,15 @@
 
 <script>
   var API="https://script.google.com/macros/s/AKfycbx_Wd1w-OQWzVBgS6lungSfGw2wG7GXFhj7Z2qQDS-tRgveM1K_bxuO8SYBKf_gDyTp-Q/exec";
-  var BRAND_ORDER=["Radja","Revolt","Rove","Winddam"];
-  var items=[], brandFilter="Semua", q="", att=null;
+  var CAT_ORDER=["Bag","Wallet","Cover","Accessory","Travel","Lainnya"];
+  var items=[], catFilter="Semua", q="", att=null;
 
   function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
   function truthy(v){return v===true||v==="TRUE"||v==="true"||v===1||v==="1";}
   function uniq(a){return a.filter(function(v,i){return v&&a.indexOf(v)===i;});}
   function rp(n){ n=Number(n); return n>0?("Rp "+Math.round(n).toLocaleString("id-ID")):""; }
+  // Buang nama client yang menempel di nama produk ("… for Frank & Co", "… x Rove").
+  function cleanNama(s){ s=String(s||""); var r=s.replace(/\s+(for|untuk)\s+.*/i,"").replace(/\s+x\s+.*/i,"").trim(); return r||s; }
 
   fetch(API)
     .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
@@ -215,11 +217,11 @@
 
   function init(){
     var chips=document.getElementById("chips");
-    var present=uniq(items.map(function(x){return x.brand;}));
-    ["Semua"].concat(BRAND_ORDER.filter(function(b){return present.indexOf(b)>=0;})).forEach(function(bn){
-      var c=document.createElement("button"); c.className="chip"; c.textContent=bn;
-      c.setAttribute("aria-pressed", bn==="Semua"?"true":"false");
-      c.addEventListener("click",function(){ brandFilter=bn; chips.querySelectorAll(".chip").forEach(function(x){x.setAttribute("aria-pressed", x.textContent===bn?"true":"false");}); draw(); });
+    var present=uniq(items.map(function(x){return x.kategori;}));
+    ["Semua"].concat(CAT_ORDER.filter(function(c){return present.indexOf(c)>=0;})).forEach(function(cn){
+      var c=document.createElement("button"); c.className="chip"; c.textContent=cn;
+      c.setAttribute("aria-pressed", cn==="Semua"?"true":"false");
+      c.addEventListener("click",function(){ catFilter=cn; chips.querySelectorAll(".chip").forEach(function(x){x.setAttribute("aria-pressed", x.textContent===cn?"true":"false");}); draw(); });
       chips.appendChild(c);
     });
     document.getElementById("q").addEventListener("input",function(e){ q=e.target.value.toLowerCase().trim(); draw(); });
@@ -229,25 +231,23 @@
   function draw(){
     var gal=document.getElementById("gal");
     var list=items.filter(function(x){
-      var mb=brandFilter==="Semua"||x.brand===brandFilter;
+      var mc=catFilter==="Semua"||x.kategori===catFilter;
       var mq=!q||((x.produk+" "+x.kategori+" "+(x.material||"")).toLowerCase().indexOf(q)>=0);
-      return mb&&mq;
+      return mc&&mq;
     });
     if(!list.length){gal.innerHTML='<p style="color:var(--ink2);font-size:14px;grid-column:1/-1;">Belum ada yang cocok. Ceritakan kebutuhanmu lewat inquiry.</p>'; return;}
     document.getElementById("count").textContent=list.length+" produk";
     gal.innerHTML="";
     list.forEach(function(x){
       var el=document.createElement("div"); el.className="item"; el.tabIndex=0; el.setAttribute("role","button");
-      var photo = x.foto ? '<div class="photo" role="img" aria-label="'+esc(x.produk)+'" style="background-image:url('+esc(x.foto)+')"></div>'
-                         : '<div class="photo">'+esc(x.produk)+'</div>';
-      var price = x.harga_mulai ? '<span class="price">mulai '+rp(x.harga_mulai)+'</span>' : '';
-      var attr;
-      if(x.sumber==="brand") attr='<span class="feat">'+esc(x.brand)+'</span>';
-      else if(truthy(x.klien_publik)&&x.klien) attr='<span class="feat">◆ pernah dibuat untuk '+esc(x.klien)+'</span>';
-      else attr='<span class="anon">klien terjaga</span>';
-      el.innerHTML=photo+'<div class="meta"><h3>'+esc(x.produk)+'</h3>'+
+      var nm=cleanNama(x.produk);
+      var photo = x.foto ? '<div class="photo" role="img" aria-label="'+esc(nm)+'" style="background-image:url('+esc(x.foto)+')"></div>'
+                         : '<div class="photo">'+esc(nm)+'</div>';
+      var price = x.harga_mulai ? '<span class="price">mulai '+rp(x.harga_mulai)+'</span>'
+                                : (x.lead_time?'':'<span class="anon">custom · minta penawaran</span>');
+      el.innerHTML=photo+'<div class="meta"><h3>'+esc(nm)+'</h3>'+
         '<div class="row"><span class="cat">'+esc(x.kategori)+'</span>'+(x.lead_time?'<span class="lt">'+esc(x.lead_time)+'</span>':'')+'</div>'+
-        attr+price+'</div>';
+        price+'</div>';
       el.addEventListener("click",function(){ openDetail(x); });
       el.addEventListener("keydown",function(e){ if(e.key==="Enter"||e.key===" "){e.preventDefault(); openDetail(x);} });
       gal.appendChild(el);
@@ -262,25 +262,23 @@
     else { dp.style.backgroundImage=""; dp.textContent="foto menyusul"; }
     var rows="";
     function spec(k,v){ return v? '<dt>'+k+'</dt><dd>'+esc(v)+'</dd>':""; }
-    rows+=spec("Kategori",x.kategori);
     rows+=spec("Bahan",x.material);
     rows+=spec("Ukuran",x.ukuran);
     rows+=spec("Berat",x.berat?x.berat+" gram":"");
     rows+=spec("Lead time",x.lead_time);
-    if(x.sumber==="bespoke"&&truthy(x.klien_publik)&&x.klien) rows+=spec("Pernah untuk",x.klien);
 
     var priceBlock = x.harga_mulai
       ? '<div class="pricebox"><span class="k">Harga</span><span class="v">mulai '+rp(x.harga_mulai)+' <small>/pcs</small></span></div>'
       : '<div class="pricebox"><span class="k">Harga</span><span class="v" style="font-size:15px;">Custom — minta penawaran</span></div>';
 
     document.getElementById("dbody").innerHTML=
-      '<h2>'+esc(x.produk)+'</h2><p class="sub">'+esc(x.brand)+(x.sumber==="brand"?" · produk brand":" · bespoke")+'</p>'+
+      '<h2>'+esc(cleanNama(x.produk))+'</h2><p class="sub">'+esc(x.kategori)+'</p>'+
       '<dl class="specs">'+rows+'</dl>'+priceBlock+
       '<div class="dactions">'+
         '<button class="btn-primary" id="d-inq">Minta penawaran</button>'+
         '<button class="btn-ghost" id="d-close">Tutup</button>'+
       '</div>';
-    document.getElementById("d-inq").addEventListener("click",function(){ closeDetail(); openInquiry(x.produk, x.kategori); });
+    document.getElementById("d-inq").addEventListener("click",function(){ closeDetail(); openInquiry(cleanNama(x.produk), x.kategori); });
     document.getElementById("d-close").addEventListener("click",closeDetail);
     detail.classList.remove("hidden");
   }
