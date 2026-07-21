@@ -12,6 +12,8 @@
     --accent:#1F3A5F; --accent-soft:#E2E8F1;
     --brass:#8C6D2F; --brass-soft:#F0E7D5;
     --ink-on-brass:#5A4718;
+    --ok:#2E6B47; --ok-soft:#E0EDE4;
+    --stop:#96302F; --stop-soft:#F7E4E3;
     --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
     --font-mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
     --r:3px;
@@ -24,6 +26,8 @@
       --accent:#7FA8D9; --accent-soft:#1E2A3A;
       --brass:#C79A4A; --brass-soft:#2A2317;
       --ink-on-brass:#E4C48A;
+      --ok:#6BAE7F; --ok-soft:#17241B;
+      --stop:#D97A72; --stop-soft:#2B1917;
     }
   }
   *{box-sizing:border-box}
@@ -42,8 +46,10 @@
   .record .names span:last-child::after{content:"";}
 
   .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;}
-  input[type=text]{flex:1;min-width:180px;background:var(--surface);color:var(--ink);border:1px solid var(--rule2);border-radius:var(--r);padding:9px 12px;font-family:var(--font-ui);font-size:14px;}
-  input:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  input[type=text],textarea,select{width:100%;background:var(--surface);color:var(--ink);border:1px solid var(--rule2);border-radius:var(--r);padding:9px 12px;font-family:var(--font-ui);font-size:14px;}
+  textarea{resize:vertical;min-height:80px;line-height:1.5;}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  #q{flex:1;min-width:180px;}
   .chips{display:flex;gap:6px;flex-wrap:wrap;}
   .chip{font-family:var(--font-mono);font-size:11px;letter-spacing:.05em;background:var(--surface);border:1px solid var(--rule2);border-radius:var(--r);padding:7px 12px;cursor:pointer;color:var(--ink2);}
   .chip:hover{border-color:var(--ink3);color:var(--ink);}
@@ -54,7 +60,9 @@
   .err{border-left:2px solid var(--brass);background:var(--brass-soft);color:var(--ink-on-brass);padding:12px 14px;font-size:13px;margin:16px 0;line-height:1.55;border-radius:0;}
 
   .gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;}
-  .item{border:1px solid var(--rule);border-radius:12px;overflow:hidden;background:var(--surface);}
+  .item{border:1px solid var(--rule);border-radius:12px;overflow:hidden;background:var(--surface);cursor:pointer;transition:border-color .12s;}
+  .item:hover{border-color:var(--brass);}
+  .item:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
   .photo{aspect-ratio:4/3;background:var(--brass-soft);display:flex;align-items:center;justify-content:center;color:var(--brass);font-family:var(--font-mono);font-size:11px;letter-spacing:.05em;border-bottom:1px solid var(--rule);background-size:cover;background-position:center;}
   .item .meta{padding:12px 14px;}
   .item .meta h3{font-size:15px;font-weight:500;margin:0 0 4px;}
@@ -63,14 +71,36 @@
   .item .lt{font-family:var(--font-mono);font-size:11px;color:var(--ink2);}
   .item .feat{font-family:var(--font-mono);font-size:10px;color:var(--brass);margin-top:7px;display:block;}
   .item .anon{font-family:var(--font-mono);font-size:10px;color:var(--ink3);margin-top:7px;display:block;}
+  .item .ask{font-family:var(--font-mono);font-size:10px;color:var(--accent);margin-top:7px;display:block;opacity:0;transition:opacity .12s;}
+  .item:hover .ask{opacity:1;}
 
   .cta{border:1px solid var(--accent);background:var(--accent-soft);border-radius:12px;padding:20px 22px;margin-top:26px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
   .cta p{margin:0;font-size:15px;}
   .cta p small{display:block;color:var(--ink2);font-size:13px;margin-top:3px;}
-  .cta a{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;background:var(--accent);color:var(--surface);border:1px solid var(--accent);border-radius:var(--r);padding:10px 18px;cursor:pointer;text-decoration:none;white-space:nowrap;}
-  .cta a:hover{filter:brightness(1.12);}
+  .btn-primary{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;background:var(--accent);color:var(--surface);border:1px solid var(--accent);border-radius:var(--r);padding:11px 20px;cursor:pointer;white-space:nowrap;}
+  .btn-primary:hover{filter:brightness(1.12);}
+  .btn-primary:disabled{opacity:.55;cursor:not-allowed;}
 
   footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--rule);color:var(--ink3);font-family:var(--font-mono);font-size:11px;letter-spacing:.04em;}
+
+  /* modal */
+  .modal{position:fixed;inset:0;background:rgba(10,10,12,.55);display:flex;align-items:flex-start;justify-content:center;padding:5vh 16px;overflow-y:auto;z-index:50;}
+  .modal.hidden{display:none;}
+  .sheet{background:var(--surface);border:1px solid var(--rule2);border-radius:12px;max-width:520px;width:100%;padding:24px 26px 26px;}
+  .sheet .x{float:right;background:none;border:0;color:var(--ink3);font-size:22px;line-height:1;cursor:pointer;padding:0;}
+  .sheet h2{font-size:18px;font-weight:600;margin:0 0 4px;}
+  .sheet .sub{color:var(--ink2);font-size:13px;margin:0 0 18px;}
+  .sheet .refnote{font-family:var(--font-mono);font-size:11px;color:var(--brass);background:var(--brass-soft);border-radius:var(--r);padding:6px 10px;margin-bottom:16px;display:none;}
+  .field{margin-bottom:13px;}
+  .field label{display:block;font-family:var(--font-mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);margin-bottom:5px;}
+  .field label .req{color:var(--stop);}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media(max-width:440px){.two{grid-template-columns:1fr;}}
+  .ferr{color:var(--stop);font-size:12px;margin-top:10px;min-height:16px;}
+  .done{text-align:center;padding:24px 8px;}
+  .done .big{font-family:var(--font-mono);font-size:15px;color:var(--ok);margin-bottom:6px;}
+  .done .id{font-family:var(--font-mono);font-size:13px;color:var(--ink2);}
+  .hidden{display:none;}
 </style>
 </head><body>
 <div class="wrap">
@@ -91,20 +121,59 @@
     <div class="chips" id="chips" role="group" aria-label="Filter kategori"></div>
   </div>
 
+  <div class="lbl" id="count" style="margin-bottom:12px;"></div>
   <div id="gal" class="gal"><div class="loading">memuat katalog…</div></div>
 
   <div class="cta">
     <p>Punya kebutuhan serupa?<small>Ceritakan produk yang kamu mau — tim kami balas dengan estimasi.</small></p>
-    <a href="mailto:radja@nrngroup.id?subject=Inquiry%20produk">Mulai inquiry</a>
+    <button class="btn-primary" id="cta">Mulai inquiry</button>
   </div>
 
   <footer>Radja Leather · NRN Group · katalog diperbarui otomatis</footer>
 </div>
 
+<!-- modal inquiry -->
+<div class="modal hidden" id="modal" role="dialog" aria-modal="true" aria-label="Form inquiry">
+  <div class="sheet">
+    <button class="x" id="x" aria-label="Tutup">&times;</button>
+    <div id="form-wrap">
+      <h2>Mulai inquiry</h2>
+      <p class="sub">Isi singkat saja — tim Radja menghubungi kembali dengan estimasi harga &amp; lead time.</p>
+      <div class="refnote" id="refnote"></div>
+      <div class="two">
+        <div class="field"><label>Nama <span class="req">*</span></label><input type="text" id="f-nama"></div>
+        <div class="field"><label>Perusahaan</label><input type="text" id="f-perusahaan"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>WhatsApp <span class="req">*</span></label><input type="text" id="f-wa" placeholder="08…"></div>
+        <div class="field"><label>Email</label><input type="text" id="f-email"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Jenis produk</label><select id="f-kategori">
+          <option value="">— pilih —</option>
+          <option>Bag</option><option>Wallet</option><option>Cover</option>
+          <option>Accessory</option><option>Travel</option><option>Lainnya</option>
+        </select></div>
+        <div class="field"><label>Perkiraan jumlah</label><input type="text" id="f-qty" placeholder="mis. 100 pcs"></div>
+      </div>
+      <div class="field"><label>Ceritakan kebutuhan <span class="req">*</span></label>
+        <textarea id="f-kebutuhan" placeholder="Ukuran, material, warna, target waktu…"></textarea></div>
+      <div class="ferr" id="ferr"></div>
+      <button class="btn-primary" id="submit" style="width:100%;margin-top:4px;">Kirim inquiry</button>
+    </div>
+    <div class="done hidden" id="done">
+      <div class="big">✓ Inquiry terkirim</div>
+      <div class="id" id="done-id"></div>
+      <p class="sub" style="margin-top:14px;">Tim Radja akan menghubungimu lewat WhatsApp/email. Terima kasih.</p>
+    </div>
+  </div>
+</div>
+
 <script>
   var API = "https://script.google.com/macros/s/AKfycbx_Wd1w-OQWzVBgS6lungSfGw2wG7GXFhj7Z2qQDS-tRgveM1K_bxuO8SYBKf_gDyTp-Q/exec";
 
-  var items=[], cat="Semua", q="";
+  var items=[], brandFilter="Semua", q="";
+  var BRAND_ORDER=["Radja","Revolt","Rove","Winddam"];
   function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
   function truthy(v){return v===true||v==="TRUE"||v==="true"||v===1||v==="1";}
   function uniq(a){return a.filter(function(v,i){return v&&a.indexOf(v)===i;});}
@@ -112,17 +181,17 @@
   fetch(API)
     .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
     .then(function(j){ items=j.items||[]; init(); })
-    .catch(function(e){
-      document.getElementById("gal").innerHTML='<div class="err">Katalog sedang tidak bisa dimuat. Coba beberapa saat lagi.</div>';
-    });
+    .catch(function(){ document.getElementById("gal").innerHTML='<div class="err">Katalog sedang tidak bisa dimuat. Coba beberapa saat lagi.</div>'; });
 
   function init(){
     var chips=document.getElementById("chips");
-    ["Semua"].concat(uniq(items.map(function(x){return x.kategori;}))).forEach(function(cn){
-      var c=document.createElement("button"); c.className="chip"; c.textContent=cn;
-      c.setAttribute("aria-pressed", cn==="Semua"?"true":"false");
+    var present=uniq(items.map(function(x){return x.brand;}));
+    var brands=["Semua"].concat(BRAND_ORDER.filter(function(b){return present.indexOf(b)>=0;}));
+    brands.forEach(function(bn){
+      var c=document.createElement("button"); c.className="chip"; c.textContent=bn;
+      c.setAttribute("aria-pressed", bn==="Semua"?"true":"false");
       c.addEventListener("click",function(){
-        cat=cn; chips.querySelectorAll(".chip").forEach(function(x){x.setAttribute("aria-pressed", x.textContent===cn?"true":"false");});
+        brandFilter=bn; chips.querySelectorAll(".chip").forEach(function(x){x.setAttribute("aria-pressed", x.textContent===bn?"true":"false");});
         draw();
       });
       chips.appendChild(c);
@@ -134,23 +203,82 @@
   function draw(){
     var gal=document.getElementById("gal");
     var list=items.filter(function(x){
-      var mc=cat==="Semua"||x.kategori===cat;
-      var mq=!q||((x.produk+" "+x.kategori).toLowerCase().indexOf(q)>=0);
-      return mc&&mq;
+      var mb=brandFilter==="Semua"||x.brand===brandFilter;
+      var mq=!q||((x.produk+" "+x.kategori+" "+(x.material||"")).toLowerCase().indexOf(q)>=0);
+      return mb&&mq;
     });
     if(!list.length){gal.innerHTML='<p style="color:var(--ink2);font-size:14px;grid-column:1/-1;">Belum ada yang cocok. Ceritakan kebutuhanmu lewat inquiry — kami buat dari nol.</p>'; return;}
+    document.getElementById("count").textContent=list.length+" produk";
     gal.innerHTML="";
     list.forEach(function(x){
-      var el=document.createElement("div"); el.className="item";
+      var el=document.createElement("div"); el.className="item"; el.tabIndex=0; el.setAttribute("role","button");
       var photo = x.foto ? '<div class="photo" role="img" aria-label="'+esc(x.produk)+'" style="background-image:url('+esc(x.foto)+')"></div>'
                          : '<div class="photo">'+esc(x.produk)+'</div>';
+      var right = x.lead_time ? '<span class="lt">'+esc(x.lead_time)+'</span>'
+                              : (x.material ? '<span class="lt">'+esc(x.material)+'</span>' : '');
+      var attr;
+      if(x.sumber==="brand") attr='<span class="feat">'+esc(x.brand)+'</span>';
+      else if(truthy(x.klien_publik)&&x.klien) attr='<span class="feat">◆ pernah dibuat untuk '+esc(x.klien)+'</span>';
+      else attr='<span class="anon">klien terjaga</span>';
       el.innerHTML=photo+'<div class="meta"><h3>'+esc(x.produk)+'</h3>'+
-        '<div class="row"><span class="cat">'+esc(x.kategori)+'</span><span class="lt">'+esc(x.lead_time)+'</span></div>'+
-        (truthy(x.klien_publik)&&x.klien?'<span class="feat">◆ pernah dibuat untuk '+esc(x.klien)+'</span>'
-                                        :'<span class="anon">klien terjaga</span>')+
-        '</div>';
+        '<div class="row"><span class="cat">'+esc(x.kategori)+'</span>'+right+'</div>'+
+        attr+'<span class="ask">+ minta dibuat serupa →</span></div>';
+      function open(){ openModal(x.produk, x.kategori); }
+      el.addEventListener("click",open);
+      el.addEventListener("keydown",function(e){ if(e.key==="Enter"||e.key===" "){e.preventDefault(); open();} });
       gal.appendChild(el);
     });
   }
+
+  /* ---------- modal inquiry ---------- */
+  var modal=document.getElementById("modal");
+  function openModal(refProduk, refKat){
+    document.getElementById("form-wrap").classList.remove("hidden");
+    document.getElementById("done").classList.add("hidden");
+    document.getElementById("ferr").textContent="";
+    var rn=document.getElementById("refnote");
+    if(refProduk){ rn.style.display="block"; rn.textContent="Referensi: "+refProduk; if(refKat) document.getElementById("f-kategori").value=refKat; }
+    else { rn.style.display="none"; }
+    modal.dataset.ref = refProduk || "";
+    modal.classList.remove("hidden");
+    document.getElementById("f-nama").focus();
+  }
+  function closeModal(){ modal.classList.add("hidden"); }
+  document.getElementById("cta").addEventListener("click",function(){ openModal("", ""); });
+  document.getElementById("x").addEventListener("click",closeModal);
+  modal.addEventListener("click",function(e){ if(e.target===modal) closeModal(); });
+  document.addEventListener("keydown",function(e){ if(e.key==="Escape"&&!modal.classList.contains("hidden")) closeModal(); });
+
+  document.getElementById("submit").addEventListener("click",function(){
+    var nama=val("f-nama"), wa=val("f-wa"), email=val("f-email"), kebutuhan=val("f-kebutuhan");
+    var ferr=document.getElementById("ferr");
+    if(!nama){ ferr.textContent="Nama wajib diisi."; return; }
+    if(!wa && !email){ ferr.textContent="Isi WhatsApp atau email."; return; }
+    if(!kebutuhan){ ferr.textContent="Ceritakan kebutuhanmu sedikit."; return; }
+    ferr.textContent="";
+    var btn=this; btn.disabled=true; btn.textContent="Mengirim…";
+    var payload={
+      nama:nama, perusahaan:val("f-perusahaan"), wa:wa, email:email,
+      kategori:val("f-kategori"), qty:val("f-qty"), kebutuhan:kebutuhan,
+      ref_produk:modal.dataset.ref||"", sumber:"portfolio"
+    };
+    fetch(API,{ method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify(payload) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if(j && j.ok){ showDone(j.inquiry_id); }
+        else { ferr.textContent=(j&&j.error)||"Gagal mengirim. Coba lagi."; btn.disabled=false; btn.textContent="Kirim inquiry"; }
+      })
+      .catch(function(){ ferr.textContent="Koneksi gagal. Coba lagi, atau hubungi kami via WhatsApp."; btn.disabled=false; btn.textContent="Kirim inquiry"; });
+  });
+
+  function showDone(id){
+    document.getElementById("form-wrap").classList.add("hidden");
+    document.getElementById("done-id").textContent="No. "+(id||"—");
+    document.getElementById("done").classList.remove("hidden");
+    ["f-nama","f-perusahaan","f-wa","f-email","f-qty","f-kebutuhan"].forEach(function(i){document.getElementById(i).value="";});
+    document.getElementById("f-kategori").value="";
+    var btn=document.getElementById("submit"); btn.disabled=false; btn.textContent="Kirim inquiry";
+  }
+  function val(id){ return document.getElementById(id).value.trim(); }
 </script>
 </body></html>
