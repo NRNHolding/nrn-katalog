@@ -34,9 +34,21 @@
   .lbl{font-family:var(--font-mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);}
 
   .hero{border-bottom:1px solid var(--rule2);padding-bottom:22px;margin-bottom:22px;}
+  .hero .logo{height:46px;width:auto;max-width:280px;display:block;margin-bottom:14px;}
+  @media (prefers-color-scheme:dark){ .hero .logo{filter:invert(1);} }
   .hero h1{font-size:26px;font-weight:600;margin:0 0 6px;letter-spacing:-.02em;}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
   .hero p{margin:0;color:var(--ink2);font-size:15px;max-width:60ch;}
 
+  .estimator{border:1px solid var(--accent);background:var(--accent-soft);border-radius:12px;padding:18px 20px;margin-bottom:22px;}
+  .estimator .lbl{display:block;margin-bottom:3px;}
+  .estimator .est-sub{margin:0 0 14px;color:var(--ink2);font-size:13px;}
+  .est-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .est-row select,.est-row input{width:auto;flex:1;min-width:130px;}
+  .est-out{margin-top:14px;font-size:14px;min-height:22px;}
+  .est-out .big{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:20px;font-weight:600;}
+  .est-out small{color:var(--ink2);font-size:12px;font-family:var(--font-mono);display:block;margin-top:3px;}
+  .est-out .muted{color:var(--ink2);font-size:13px;}
   .record{border:1px solid var(--rule);background:var(--surface);border-radius:var(--r);padding:14px 16px;margin-bottom:22px;}
   .record .lbl{display:block;margin-bottom:8px;}
   .record .names span{font-size:14px;color:var(--ink);margin-right:6px;white-space:nowrap;}
@@ -121,8 +133,24 @@
 </head><body>
 <div class="wrap">
   <div class="hero">
-    <h1>Radja Leather</h1>
+    <img class="logo" src="https://drive.google.com/thumbnail?id=1k5oRnsnPn5v4_5RzeIjj0flUERo9qI8n&sz=w800" alt="Radja Leather" width="800" height="141">
+    <h1 class="sr-only">Radja Leather</h1>
     <p>Manufaktur kulit B2B sejak 2015. Sebagian yang pernah kami kerjakan — dari card holder sampai duffle bag, dijahit tangan.</p>
+  </div>
+
+  <div class="estimator">
+    <span class="lbl">Perkiraan harga cepat</span>
+    <p class="est-sub">Pilih jenis &amp; jumlah — dapat gambaran dulu, baru kirim inquiry.</p>
+    <div class="est-row">
+      <select id="est-kat">
+        <option value="">Jenis produk…</option>
+        <option>Bag</option><option>Wallet</option><option>Cover</option>
+        <option>Accessory</option><option>Travel</option>
+      </select>
+      <input type="number" id="est-qty" min="1" placeholder="jumlah (pcs)">
+      <button class="btn-primary" id="est-go">Hitung</button>
+    </div>
+    <div class="est-out" id="est-out"></div>
   </div>
 
   <div class="record">
@@ -363,5 +391,33 @@
     var btn=document.getElementById("submit"); btn.disabled=false; btn.textContent="Kirim inquiry";
   }
   function val(id){ return document.getElementById(id).value.trim(); }
+
+  /* ---------- estimator harga ---------- */
+  function runEstimate(){
+    var kat=document.getElementById("est-kat").value;
+    var qty=parseInt(document.getElementById("est-qty").value,10);
+    var out=document.getElementById("est-out");
+    if(!kat){ out.innerHTML='<span class="muted">Pilih jenis produk dulu.</span>'; return; }
+    if(!qty||qty<1){ out.innerHTML='<span class="muted">Isi jumlah (pcs).</span>'; return; }
+    out.innerHTML='<span class="muted">menghitung…</span>';
+    fetch(API+"?view=estimate&kategori="+encodeURIComponent(kat)+"&qty="+qty)
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if(!j.ok){
+          out.innerHTML='<span class="muted">Belum ada acuan harga untuk '+esc(kat)+'. Langsung kirim inquiry, tim kami hitungkan.</span> '+
+            '<button class="btn-ghost" id="est-inq2" style="margin-top:8px;">Kirim inquiry</button>';
+          document.getElementById("est-inq2").addEventListener("click",function(){ openInquiry("", kat); prefillQty(qty); });
+          return;
+        }
+        out.innerHTML='<span class="big">± '+rp(j.min)+' – '+rp(j.max)+'</span> <span style="font-size:13px;color:var(--ink2)">/pcs</span>'+
+          '<small>estimasi untuk '+qty+' pcs · dari '+j.count+' produk sejenis · angka indikatif, quotation resmi menyusul</small>'+
+          '<button class="btn-primary" id="est-inq" style="margin-top:12px;">Lanjut inquiry</button>';
+        document.getElementById("est-inq").addEventListener("click",function(){ openInquiry("", kat); prefillQty(qty); });
+      })
+      .catch(function(){ out.innerHTML='<span class="muted">Gagal menghitung. Coba lagi.</span>'; });
+  }
+  function prefillQty(qty){ var f=document.getElementById("f-qty"); if(f) f.value=qty+" pcs"; }
+  document.getElementById("est-go").addEventListener("click",runEstimate);
+  document.getElementById("est-qty").addEventListener("keydown",function(e){ if(e.key==="Enter") runEstimate(); });
 </script>
 </body></html>
