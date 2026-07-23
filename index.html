@@ -100,7 +100,15 @@
   .sheet{background:var(--surface);border:1px solid var(--rule2);border-radius:12px;max-width:540px;width:100%;padding:0;overflow:hidden;}
   .sheet .x{position:absolute;top:12px;right:14px;background:rgba(0,0,0,.25);border:0;color:#fff;font-size:20px;line-height:1;cursor:pointer;width:30px;height:30px;border-radius:50%;z-index:2;}
   .sheet-body{padding:22px 24px 24px;position:relative;}
-  .dphoto{aspect-ratio:16/10;background:var(--brass-soft);display:flex;align-items:center;justify-content:center;color:var(--brass);font-family:var(--font-mono);font-size:12px;background-size:cover;background-position:center;}
+  .dphoto{aspect-ratio:16/10;background:var(--brass-soft);display:flex;align-items:center;justify-content:center;color:var(--brass);font-family:var(--font-mono);font-size:12px;background-size:cover;background-position:center;transition:background-image .12s;}
+  /* strip thumbnail — muncul hanya kalau folder produk berisi lebih dari satu foto */
+  .dthumbs{display:none;gap:6px;padding:8px 10px 0;overflow-x:auto;}
+  .dthumbs.on{display:flex;}
+  .dthumbs button{flex:0 0 auto;width:54px;height:42px;padding:0;border:1px solid var(--rule);
+    border-radius:3px;background-size:cover;background-position:center;cursor:pointer;opacity:.62;}
+  .dthumbs button:hover{opacity:1;}
+  .dthumbs button[aria-current="true"]{opacity:1;border-color:var(--ink);border-width:2px;}
+  .dthumbs button:focus-visible{outline:2px solid var(--brass);outline-offset:1px;}
   .sheet h2{font-size:18px;font-weight:600;margin:0 0 3px;}
   .sheet .sub{color:var(--ink2);font-size:13px;margin:0 0 16px;}
   .specs{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;font-size:13px;margin-bottom:16px;}
@@ -181,6 +189,7 @@
   <div class="sheet">
     <button class="x" id="dx" aria-label="Tutup">&times;</button>
     <div class="dphoto" id="dphoto"></div>
+    <div class="dthumbs" id="dthumbs"></div>
     <div class="sheet-body" id="dbody"></div>
   </div>
 </div>
@@ -288,6 +297,27 @@
     var dp=document.getElementById("dphoto");
     if(x.foto){ dp.style.backgroundImage="url("+x.foto+")"; dp.textContent=""; }
     else { dp.style.backgroundImage=""; dp.textContent="foto menyusul"; }
+
+    // Galeri: satu folder produk sering berisi beberapa sudut pengambilan.
+    var galeri=(x.foto_semua&&x.foto_semua.length?x.foto_semua:(x.foto?[x.foto]:[]));
+    var ts=document.getElementById("dthumbs");
+    ts.innerHTML=""; ts.classList.remove("on");
+    if(galeri.length>1){
+      ts.classList.add("on");
+      galeri.forEach(function(u,i){
+        var b=document.createElement("button");
+        b.type="button";
+        b.style.backgroundImage="url("+u+")";
+        b.setAttribute("aria-label","Foto "+(i+1)+" dari "+galeri.length);
+        b.setAttribute("aria-current",i===0?"true":"false");
+        b.addEventListener("click",function(){
+          dp.style.backgroundImage="url("+u+")"; dp.textContent="";
+          Array.prototype.forEach.call(ts.children,function(c){ c.setAttribute("aria-current","false"); });
+          b.setAttribute("aria-current","true");
+        });
+        ts.appendChild(b);
+      });
+    }
     var rows="";
     function spec(k,v){ return v? '<dt>'+k+'</dt><dd>'+esc(v)+'</dd>':""; }
     rows+=spec("Bahan",x.material);
