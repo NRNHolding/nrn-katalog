@@ -101,6 +101,21 @@
   .sheet .x{position:absolute;top:12px;right:14px;background:rgba(0,0,0,.25);border:0;color:#fff;font-size:20px;line-height:1;cursor:pointer;width:30px;height:30px;border-radius:50%;z-index:2;}
   .sheet-body{padding:22px 24px 24px;position:relative;}
   .dphoto{aspect-ratio:16/10;background:var(--brass-soft);display:flex;align-items:center;justify-content:center;color:var(--brass);font-family:var(--font-mono);font-size:12px;background-size:cover;background-position:center;transition:background-image .12s;}
+  /* panggung foto — tempat panah geser & penghitung menumpang di atas gambar */
+  .dstage{position:relative;}
+  .dnav{position:absolute;top:50%;transform:translateY(-50%);width:38px;height:38px;
+    display:none;align-items:center;justify-content:center;border:none;border-radius:50%;
+    background:rgba(0,0,0,.42);color:#fff;font-size:24px;line-height:1;cursor:pointer;
+    padding:0 0 3px;transition:background .12s;}
+  .dstage.multi .dnav{display:flex;}
+  .dnav:hover{background:rgba(0,0,0,.66);}
+  .dnav:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+  .dnav.prev{left:10px;} .dnav.next{right:10px;}
+  .dcount{position:absolute;right:12px;bottom:12px;display:none;
+    background:rgba(0,0,0,.5);color:#fff;border-radius:999px;padding:2px 9px;
+    font-family:var(--font-mono);font-size:11px;}
+  .dstage.multi .dcount{display:block;}
+
   /* strip thumbnail — muncul hanya kalau folder produk berisi lebih dari satu foto */
   .dthumbs{display:none;gap:6px;padding:8px 10px 0;overflow-x:auto;}
   .dthumbs.on{display:flex;}
@@ -188,7 +203,12 @@
 <div class="modal hidden" id="detail" role="dialog" aria-modal="true" aria-label="Detail produk">
   <div class="sheet">
     <button class="x" id="dx" aria-label="Tutup">&times;</button>
-    <div class="dphoto" id="dphoto"></div>
+    <div class="dstage" id="dstage">
+      <div class="dphoto" id="dphoto"></div>
+      <button class="dnav prev" id="dprev" type="button" aria-label="Foto sebelumnya">&#8249;</button>
+      <button class="dnav next" id="dnext" type="button" aria-label="Foto berikutnya">&#8250;</button>
+      <div class="dcount" id="dcount" aria-live="polite"></div>
+    </div>
     <div class="dthumbs" id="dthumbs"></div>
     <div class="sheet-body" id="dbody"></div>
   </div>
@@ -293,30 +313,67 @@
 
   /* ---------- DETAIL modal ---------- */
   var detail=document.getElementById("detail");
-  function openDetail(x){
-    var dp=document.getElementById("dphoto");
-    if(x.foto){ dp.style.backgroundImage="url("+x.foto+")"; dp.textContent=""; }
-    else { dp.style.backgroundImage=""; dp.textContent="foto menyusul"; }
 
-    // Galeri: satu folder produk sering berisi beberapa sudut pengambilan.
-    var galeri=(x.foto_semua&&x.foto_semua.length?x.foto_semua:(x.foto?[x.foto]:[]));
+  /* ---------- geser foto ---------- */
+  var galeri=[], gIdx=0;
+  function tampilFoto(i){
+    if(!galeri.length) return;
+    gIdx=(i+galeri.length)%galeri.length;             // berputar di ujung
+    var dp=document.getElementById("dphoto");
+    dp.style.backgroundImage="url("+galeri[gIdx]+")";
+    dp.textContent="";
+    document.getElementById("dcount").textContent=(gIdx+1)+" / "+galeri.length;
     var ts=document.getElementById("dthumbs");
-    ts.innerHTML=""; ts.classList.remove("on");
-    if(galeri.length>1){
-      ts.classList.add("on");
-      galeri.forEach(function(u,i){
-        var b=document.createElement("button");
-        b.type="button";
-        b.style.backgroundImage="url("+u+")";
-        b.setAttribute("aria-label","Foto "+(i+1)+" dari "+galeri.length);
-        b.setAttribute("aria-current",i===0?"true":"false");
-        b.addEventListener("click",function(){
-          dp.style.backgroundImage="url("+u+")"; dp.textContent="";
-          Array.prototype.forEach.call(ts.children,function(c){ c.setAttribute("aria-current","false"); });
-          b.setAttribute("aria-current","true");
+    Array.prototype.forEach.call(ts.children,function(c,n){
+      c.setAttribute("aria-current",n===gIdx?"true":"false");
+    });
+    // Geser strip supaya thumbnail aktif tetap terlihat. Dihitung manual —
+    // scrollIntoView bisa ikut menggeser halaman di belakang modal.
+    var akt=ts.children[gIdx];
+    if(akt && ts.scrollWidth>ts.clientWidth){
+      ts.scrollLeft=akt.offsetLeft-(ts.clientWidth/2)+(akt.clientWidth/2);
+    }
+  }
+  function geser(d){ tampilFoto(gIdx+d); }
+
+  document.getElementById("dprev").addEventListener("click",function(e){ e.stopPropagation(); geser(-1); });
+  document.getElementById("dnext").addEventListener("click",function(e){ e.stopPropagation(); geser(1); });
+
+  // Usap layar (mobile) — ambang 40px supaya sentuhan biasa tak terbaca sebagai geser.
+  (function(){
+    var x0=null, st=document.getElementById("dstage");
+    st.addEventListener("touchstart",function(e){ x0=e.touches[0].clientX; },{passive:true});
+    st.addEventListener("touchend",function(e){
+      if(x0===null) return;
+      var dx=e.changedTouches[0].clientX-x0; x0=null;
+      if(Math.abs(dx)>40) geser(dx<0?1:-1);
+    },{passive:true});
+  })();
+
+  function openDetail(x){
+    // Galeri: satu folder produk sering berisi beberapa sudut pengambilan.
+    var dp=document.getElementById("dphoto");
+    var stage=document.getElementById("dstage");
+    var ts=document.getElementById("dthumbs");
+    galeri=(x.foto_semua&&x.foto_semua.length?x.foto_semua:(x.foto?[x.foto]:[]));
+    ts.innerHTML=""; ts.classList.remove("on"); stage.classList.remove("multi");
+
+    if(!galeri.length){
+      dp.style.backgroundImage=""; dp.textContent="foto menyusul";
+      document.getElementById("dcount").textContent="";
+    } else {
+      if(galeri.length>1){
+        stage.classList.add("multi"); ts.classList.add("on");
+        galeri.forEach(function(u,i){
+          var b=document.createElement("button");
+          b.type="button";
+          b.style.backgroundImage="url("+u+")";
+          b.setAttribute("aria-label","Foto "+(i+1)+" dari "+galeri.length);
+          b.addEventListener("click",function(){ tampilFoto(i); });
+          ts.appendChild(b);
         });
-        ts.appendChild(b);
-      });
+      }
+      tampilFoto(0);
     }
     var rows="";
     function spec(k,v){ return v? '<dt>'+k+'</dt><dd>'+esc(v)+'</dd>':""; }
@@ -361,7 +418,13 @@
   document.getElementById("cta").addEventListener("click",function(){ openInquiry("",""); });
   document.getElementById("x").addEventListener("click",closeInquiry);
   modal.addEventListener("click",function(e){ if(e.target===modal) closeInquiry(); });
-  document.addEventListener("keydown",function(e){ if(e.key==="Escape"){ closeInquiry(); closeDetail(); } });
+  document.addEventListener("keydown",function(e){
+    if(e.key==="Escape"){ closeInquiry(); closeDetail(); return; }
+    // panah kiri/kanan menggeser foto, hanya saat detail terbuka & fotonya banyak
+    if(detail.classList.contains("hidden")||galeri.length<2) return;
+    if(e.key==="ArrowLeft"){ e.preventDefault(); geser(-1); }
+    else if(e.key==="ArrowRight"){ e.preventDefault(); geser(1); }
+  });
 
   /* image upload — kompres client-side */
   document.getElementById("f-foto").addEventListener("change",function(e){
